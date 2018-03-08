@@ -67,6 +67,23 @@ class L3Perf:
                                r"sed -i 's/\(CONFIG_RTE_LIBRTE_MLX5_PMD=\)n/\1y/g' config/common_base;"
                                "make -j24 install T=${RTE_TARGET}")
 
+            if "xmit" == server_config["server_type"]:
+                # compile pktgen package
+                pktgen_dst_path = server_config["dpdk_path"] + (server_config["file_list"])["pktgen_pkg"]
+                pktgen_dst_path = pktgen_dst_path.rsplit('.', 2)[0]
+                print(pktgen_dst_path)
+                # step 1: cp patch for pktgen 3.4.5
+                pktgen_patch_path = server_config["repo_path"] + (server_config["file_list"])["pktgen_patch"]
+                m.sshclient_execmd("cp " + pktgen_patch_path + " " + pktgen_dst_path)
+                # step 2 patch patch file
+                m.sshclient_execmd("cd " + pktgen_dst_path + ";" +
+                                   "patch -p1 < " + (server_config["file_list"])["pktgen_patch"])
+                # step 3 compile
+                m.sshclient_execmd("cd " + pktgen_dst_path + ";"
+                                  "export RTE_TARGET=arm64-armv8a-linuxapp-gcc;"
+                                  "export RTE_SDK=" + dpdk_dst_path + ";"
+                                  "make -j 24")
+
 
 
 def run_l3_perf():
