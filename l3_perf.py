@@ -2,12 +2,14 @@ import paramiko
 import os
 import json
 import session
+import time
 # import pexpect
 
 class L3Perf:
     def __init__(self, l3_cfg_file):
         with open(l3_cfg_file) as config_file:
             self.config_list = json.load(config_file)
+            self.pktgen_cli = None
         print("Load L3 perf configuration file success.")
 
     def upload_pkgs(self, config_list):
@@ -88,14 +90,19 @@ class L3Perf:
     def run_l3fwd(self, config_list):
         print("Start forwarder.")
 
-    def run_pktgen(self, config_list):
-        for index in range(len(config_list)):
-            server_config = config_list[index]
+    def run_pktgen(self):
+        for index in range(len(self.config_list)):
+            server_config = self.config_list[index]
             if "xmit" == server_config["server_type"]:
+                print("Enable socket port 22022 on firewall...")
+                m = session.DirectSession(server_config['host_name'], server_config['host_port'],
+                                          server_config['username'], server_config['password'])
+                m.sshclient_execmd("firewall-cmd --zone=public --add-port=22022/tcp --permanent")
+                m.sshclient_execmd("firewall-cmd --reload")
                 print("Starting pktgen...")
                 # m = session.DirectSession(server_config['host_name'], server_config['host_port'],
                 #                           server_config['username'], server_config['password'])
-                server_config = config_list[index]
+                server_config = self.config_list[index]
                 pktgen_path = (server_config["dpdk_path"] + (server_config["file_list"])["pktgen_pkg"]).rsplit('.', 2)[0]
                 pktgen_bin_name = (server_config["file_list"])["pktgen_pkg"].rsplit('-', 1)[0]
                 print("pktgen_path: " + pktgen_path + ", pktgen_bin_name: " + pktgen_bin_name)
@@ -104,14 +111,20 @@ class L3Perf:
                 # ssh.connect(hostname=server_config['host_name'], port=server_config['host_port'], username=server_config['username'], password=server_config['password'])
                 # channel = ssh.invoke_shell()
 
-                sh = session.ShellSession(server_config['host_name'], server_config['host_port'],
+                self.pktgen_cli = session.PktgenSession(server_config['host_name'], server_config['host_port'],
                                            server_config['username'], server_config['password'])
                 execmd = "cd " + pktgen_path + ";" + "app/" + server_config["rte_target"] + "/" + pktgen_bin_name + " " + \
                                             "-l 3-43 -n 6 -w 0000:01:00.0 -w 0003:01:00.0 -- -G -P --crc-strip -m [4:14-23].0 -m [24:34-43].1 -f themes/white-black.theme"
                 print(execmd)
-                output = sh.execute(execmd)
-                #output_str = str(output, encoding="utf-8")
+                output = self.pktgen_cli.execute(execmd)
                 print(output)
+                #output_str = str(output, encoding="utf-8")
+
+    def quit_pktgen(self):
+        quit_cmd = 'quit'
+        output = self.pktgen_cli.execute(quit_cmd)
+        print(output)
+
 
 
 
@@ -119,4 +132,6 @@ def run_l3_perf():
     l3_m = L3Perf("config.json")
     # l3_m.upload_pkgs(l3_m.config_list)
     # l3_m.install_pkgs(l3_m.config_list)
-    l3_m.run_pktgen(l3_m.config_list)
+    l3_m.run_pktgen()
+    time.sleep(10)
+    l3_m.quit_pktgen()
