@@ -3,6 +3,7 @@ import os
 import json
 import session
 import time
+import nclib
 # import pexpect
 
 class L3Perf:
@@ -30,9 +31,9 @@ class L3Perf:
             mnlx_dst_path = server_config["mnlx_path"]
             m.sshclient_execmd("mkdir -p " + dpdk_dst_path)
             m.sshclient_execmd("mkdir -p " + mnlx_dst_path)
-            dpdk_src_path = server_config["repo_path"] + (server_config["file_list"])["dpdk_pkg"]
-            mnlx_src_path = server_config["repo_path"] + (server_config["file_list"])["ofed_pkg"]
-            pktgen_src_path = server_config["repo_path"] + (server_config["file_list"])["pktgen_pkg"]
+            dpdk_src_path = server_config["repo_path"] + (server_config["pkg_list"])["dpdk_pkg"]
+            mnlx_src_path = server_config["repo_path"] + (server_config["pkg_list"])["ofed_pkg"]
+            pktgen_src_path = server_config["repo_path"] + (server_config["pkg_list"])["pktgen_pkg"]
 
             # extract packages
             m.sshclient_execmd("tar -zxf " + dpdk_src_path + " -C " + dpdk_dst_path)
@@ -49,7 +50,7 @@ class L3Perf:
             #print("ofed_v43:" + ofed_v43)
             if ofed_v43 not in ofed_ver:
                 print("Begin install OFED in " + server_config["server_type"] + " server.")
-                mnlx_dst_path = server_config["mnlx_path"]+(server_config["file_list"])["ofed_pkg"]
+                mnlx_dst_path = server_config["mnlx_path"]+(server_config["pkg_list"])["ofed_pkg"]
                 mnlx_dst_path = mnlx_dst_path.rsplit('.', 1)[0]
                 print(mnlx_dst_path)
                 m.sshclient_execmd(mnlx_dst_path + "/mlnxofedinstall --dpdk --with-mlnx-ethtool --with-mft --with-mstflint --add-kernel-support --upstream-libs")
@@ -59,7 +60,7 @@ class L3Perf:
                 #m.sshclient_execmd("tar -zxf " + pktgen_src_path + " -C " + dpdk_dst_path)
 
             # compile dpdk package
-            dpdk_dst_path = server_config["dpdk_path"]+(server_config["file_list"])["dpdk_pkg"]
+            dpdk_dst_path = server_config["dpdk_path"]+(server_config["pkg_list"])["dpdk_pkg"]
             dpdk_dst_path = dpdk_dst_path.rsplit('.', 2)[0]
             print(dpdk_dst_path)
             m.sshclient_execmd("cd " + dpdk_dst_path + ";"
@@ -72,15 +73,15 @@ class L3Perf:
 
             if "xmit" == server_config["server_type"]:
                 # compile pktgen package
-                pktgen_dst_path = server_config["dpdk_path"] + (server_config["file_list"])["pktgen_pkg"]
+                pktgen_dst_path = server_config["dpdk_path"] + (server_config["pkg_list"])["pktgen_pkg"]
                 pktgen_dst_path = pktgen_dst_path.rsplit('.', 2)[0]
                 print(pktgen_dst_path)
                 # step 1: cp patch for pktgen 3.4.5
-                pktgen_patch_path = server_config["repo_path"] + (server_config["file_list"])["pktgen_patch"]
+                pktgen_patch_path = server_config["repo_path"] + (server_config["pkg_list"])["pktgen_patch"]
                 m.sshclient_execmd("cp " + pktgen_patch_path + " " + pktgen_dst_path)
                 # step 2 patch patch file
                 m.sshclient_execmd("cd " + pktgen_dst_path + ";" +
-                                   "patch -p1 < " + (server_config["file_list"])["pktgen_patch"])
+                                   "patch -p1 < " + (server_config["pkg_list"])["pktgen_patch"])
                 # step 3 compile
                 m.sshclient_execmd("cd " + pktgen_dst_path + ";"
                                   "export RTE_TARGET=arm64-armv8a-linuxapp-gcc;"
@@ -103,8 +104,8 @@ class L3Perf:
                 # m = session.DirectSession(server_config['host_name'], server_config['host_port'],
                 #                           server_config['username'], server_config['password'])
                 server_config = self.config_list[index]
-                pktgen_path = (server_config["dpdk_path"] + (server_config["file_list"])["pktgen_pkg"]).rsplit('.', 2)[0]
-                pktgen_bin_name = (server_config["file_list"])["pktgen_pkg"].rsplit('-', 1)[0]
+                pktgen_path = (server_config["dpdk_path"] + (server_config["pkg_list"])["pktgen_pkg"]).rsplit('.', 2)[0]
+                pktgen_bin_name = (server_config["pkg_list"])["pktgen_pkg"].rsplit('-', 1)[0]
                 print("pktgen_path: " + pktgen_path + ", pktgen_bin_name: " + pktgen_bin_name)
                 # ssh = paramiko.SSHClient()
                 # ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -120,12 +121,52 @@ class L3Perf:
                 print(output)
                 #output_str = str(output, encoding="utf-8")
 
+    def set_pktgen_range(self):
+        for index in range(len(self.config_list)):
+            server_config = self.config_list[index]
+            if "xmit" == server_config["server_type"]:
+                logfile = open('log.txt', 'wb')
+                pktgen_cfg = server_config["local_cfg_path"] + (server_config["cfg_list"])["pktgen_range"]
+                lua_fd = open(pktgen_cfg, 'r')
+                # lua_fd = open('/root/DPDK/L3_Xmit/config/test_range.lua', 'r')
+                lua_range_str = lua_fd.read()
+                lua_range_b = bytes(lua_range_str, encoding="utf8")
+                nc = nclib.Netcat((server_config["host_name"], server_config["pktgen_port"]), verbose=True, log_send=logfile, log_recv=logfile)
+                nc.echo_hex = True
+                # nc.send(b'\x00\x0dpktgen.start("all");')
+                nc.send(lua_range_b)
+                nc.close()
+
+    def start_pktgen(self, port):
+        for index in range(len(self.config_list)):
+            server_config = self.config_list[index]
+            if "xmit" == server_config["server_type"]:
+                logfile = open('log.txt', 'wb')
+                nc = nclib.Netcat((server_config["host_name"], server_config["pktgen_port"]), verbose=True,
+                                  log_send=logfile, log_recv=logfile)
+                nc.echo_hex = True
+                cmd_str = 'pktgen.start("' + port + '");\n'
+                cmd_b = bytes(cmd_str, encoding="utf8")
+                nc.send(cmd_b)
+                nc.close()
+
+    def stop_pktgen(self, port):
+        for index in range(len(self.config_list)):
+            server_config = self.config_list[index]
+            if "xmit" == server_config["server_type"]:
+                logfile = open('log.txt', 'wb')
+                nc = nclib.Netcat((server_config["host_name"], server_config["pktgen_port"]), verbose=True,
+                                  log_send=logfile, log_recv=logfile)
+                nc.echo_hex = True
+                cmd_str = 'pktgen.stop("' + port + '");\n'
+                cmd_b = bytes(cmd_str, encoding="utf8")
+                nc.send(cmd_b)
+                nc.close()
+
     def quit_pktgen(self):
         quit_cmd = 'quit'
         output = self.pktgen_cli.execute(quit_cmd)
         print(output)
-
-
 
 
 def run_l3_perf():
@@ -133,5 +174,8 @@ def run_l3_perf():
     # l3_m.upload_pkgs(l3_m.config_list)
     # l3_m.install_pkgs(l3_m.config_list)
     l3_m.run_pktgen()
-    time.sleep(10)
+    l3_m.set_pktgen_range()
+    l3_m.start_pktgen('all')
+    time.sleep(30)
+    l3_m.stop_pktgen('all')
     l3_m.quit_pktgen()
