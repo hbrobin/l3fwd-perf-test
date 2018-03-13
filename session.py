@@ -45,18 +45,30 @@ class DirectSession:
             print("Connect remote server success.")
             print("******************************* Synchronize Files -- Start")
             #for path in path_config:
-            local_path = cfg_dict["local_path"]
+            local_pkg_path = cfg_dict["local_pkg_path"]
+            local_cfg_path = cfg_dict["local_cfg_path"]
             repo_path = cfg_dict["repo_path"]
-            create_path_cmd = "mkdir -p "+repo_path
-            self.sshclient_execmd(create_path_cmd)
+            config_path = cfg_dict["config_path"]
+            create_repo_path = "mkdir -p "+repo_path
+            create_config_path = "mkdir -p " + config_path
+            self.sshclient_execmd(create_repo_path)
+            self.sshclient_execmd(create_config_path)
             print(">>>>>>>>>>>>>>> Traverse local files -- Start")
-            filenames = tuple(cfg_dict["file_list"].values())
+            filenames = tuple(cfg_dict["pkg_list"].values())
             print(filenames)
             print(">>>>>>>>>>>>>>> Traverse local files -- Done")
+            # sync packages
             sync_file_count = 0
             for filename in filenames:
-                sftp.put(local_path + filename, repo_path + filename)
-                print("Sync local files: \"" + local_path + filename + "\"  to server path:\"" + repo_path + filename + "\"")
+                sftp.put(local_pkg_path + filename, repo_path + filename)
+                print("Sync local files: \"" + local_pkg_path + filename + "\"  to server path:\"" + repo_path + filename + "\"")
+                sync_file_count += 1
+            # sync configs
+            filenames = tuple(cfg_dict["cfg_list"].values())
+            print(filenames)
+            for filename in filenames:
+                sftp.put(local_cfg_path + filename, config_path + filename)
+                print("Sync local files: \"" + local_cfg_path + filename + "\"  to server path:\"" + config_path + filename + "\"")
                 sync_file_count += 1
             print("******************************* Synchronize " + str(sync_file_count) + " Files -- Done")
         finally:
