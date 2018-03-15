@@ -87,6 +87,15 @@ class L3Perf:
                                   "export RTE_TARGET=arm64-armv8a-linuxapp-gcc;"
                                   "export RTE_SDK=" + dpdk_dst_path + ";"
                                   "make -j 24")
+            elif "forward" == server_config["server_type"]:
+                # compile l3fwd
+                dpdk_dst_path = server_config["dpdk_path"] + (server_config["pkg_list"])["dpdk_pkg"]
+                dpdk_dst_path = dpdk_dst_path.rsplit('.', 2)[0]
+                print(dpdk_dst_path)
+                m.sshclient_execmd("cd " + dpdk_dst_path + ";"
+                                   "export RTE_TARGET=arm64-armv8a-linuxapp-gcc;"
+                                   "export RTE_SDK=" + dpdk_dst_path + ";"
+                                   "make -C" + server_config["l3fwd_sub_path"])
 
     def run_l3fwd(self, config_list):
         print("Start forwarder.")
@@ -175,7 +184,9 @@ def run_l3_perf():
     # l3_m.install_pkgs(l3_m.config_list)
     l3_m.run_pktgen()
     l3_m.set_pktgen_range()
-    l3_m.start_pktgen('all')
-    time.sleep(30)
-    l3_m.stop_pktgen('all')
+    # l3_m.start_pktgen('all')
+    l3_m.start_pktgen('1')
+    time.sleep(300)
+    # l3_m.stop_pktgen('all')
+    l3_m.stop_pktgen('1')
     l3_m.quit_pktgen()
