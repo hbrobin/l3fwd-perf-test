@@ -26,7 +26,7 @@ class DirectSession:
 
         s.connect(hostname=self.hostname, port=self.port, username=self.username, password=self.password)
         stdin, stdout, stderr = s.exec_command(execmd)
-        stdin.write("Y")  # Generally speaking, the first connection, need a simple interaction.
+        # stdin.write("Y")  # Generally speaking, the first connection, need a simple interaction.
 
         #print(stdout.read())
         str = stdout.read()
@@ -42,7 +42,7 @@ class DirectSession:
             transport = paramiko.Transport(self.hostname, self.port)
             transport.connect(username=self.username, password=self.password)
             sftp = paramiko.SFTPClient.from_transport(transport)
-            print("Connect remote server success.")
+            print("Connect to remote server success.")
             print("******************************* Synchronize Files -- Start")
             #for path in path_config:
             local_pkg_path = cfg_dict["local_pkg_path"]
