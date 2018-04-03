@@ -35,6 +35,19 @@ class DirectSession:
         print(str)
         return str
 
+    def execute(self, command):
+        try:
+            s = paramiko.SSHClient()
+            s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            s.connect(hostname=self.hostname, port=self.port, username=self.username, password=self.password)
+            stdin, stdout, stderr = s.exec_command(command)
+
+            for line in stdout:
+                print(line.strip("\n"))
+        except Exception as e:
+            print("execute command %s error, error message is %s" % (command, e))
+            return ""
+
     def sync_sw_repo(self, cfg_dict):
         paramiko.util.log_to_file("paramiko_syncfile.log")
 
