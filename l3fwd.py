@@ -117,8 +117,6 @@ class L3Fwd:
 
     def stop_l3fwd(self):
         print("Stopping l3fwd...")
-        m = session.DirectSession(self.config['host_name'], self.config['host_port'],
-                                  self.config['username'], self.config['password'])
         execmd = "pkill l3fwd"
         print(execmd)
         self.shell_cli = session.ShellSession(self.config['host_name'], self.config['host_port'],
