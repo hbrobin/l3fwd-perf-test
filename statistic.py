@@ -7,6 +7,12 @@ import l3fwd
 import time
 import nclib
 import threading
+import paramiko
+import re
+from locale import *
+import pandas as pd
+
+
 # import pexpect
 
 exitFlag = 0
@@ -69,9 +75,44 @@ class ppsThread(threading.Thread):
         print("terminate " + self.name)
 
     def collect_data(self):
+        tx_pps_seq = []
+        rx_pps_seq = []
+
+        setlocale(LC_NUMERIC, 'English_US')
+
         print("exitFlag = %d, %s processing..." % (exitFlag, self.name))
         statistic_dst_path = self.statistic.config["tool_path"]
         cmd = statistic_dst_path + self.statistic.config["pkg_list"]["eth_stat"]
         print(cmd)
         while not exitFlag:
-            self.statistic.m.execute(cmd)
+            try:
+                s = paramiko.SSHClient()
+                s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+                s.connect(hostname=self.statistic.config['host_name'], port=self.statistic.config['host_port'],
+                          username=self.statistic.config['username'], password=self.statistic.config['password'])
+                stdin, stdout, stderr = s.exec_command(cmd)
+
+                for line in stdout:
+                    line = line.strip("\n")
+                    if 'SUM' in line:
+                        # remove redundant space
+                        line = re.sub(r"\s{2,}", " ", line)
+                        # print(line)
+                        line_array = line.split(' ')
+                        tx_pps_seq.append(atoi(line_array[3]))
+                        rx_pps_seq.append(atoi(line_array[6]))
+                        # print(line_array)
+                        # print(line_array[3] + " " + line_array[6])
+            except Exception as e:
+                print("execute command %s error, error message is %s" % (cmd, e))
+                return ""
+        print(tx_pps_seq)
+        avg_tx = average(tx_pps_seq)
+        print(avg_tx)
+        print(rx_pps_seq)
+        avg_rx = average(rx_pps_seq)
+        print(avg_rx)
+
+def average(seq):
+    return int(sum(seq) / len(seq))
+    # return float(sum(seq)) / len(seq)
