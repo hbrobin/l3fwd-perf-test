@@ -9,7 +9,7 @@ import nclib
 import threading
 import paramiko
 import re
-from locale import *
+import locale
 import pandas as pd
 
 
@@ -35,7 +35,9 @@ class Statistic:
                                 "cp " + statistic_src_path + " " + statistic_dst_path + ";"
                                 "chmod +rx " + statistic_dst_path + (self.config["pkg_list"])["eth_stat"])
 
-    def start_statistic(self):
+    def start_statistic(self, core_num):
+        global exitFlag
+        exitFlag = 0
         threadList = ["PPS-Collection-Thread"]
         # nameList = ["One", "Two", "Three", "Four", "Five"]
         # queueLock = threading.Lock()
@@ -43,7 +45,7 @@ class Statistic:
         threads = []
         threadID = 1
 
-        # 创建新线程
+        # create new thread
         for tName in threadList:
             self.pps_thread = ppsThread(self, threadID, tName)
             self.pps_thread.start()
@@ -78,7 +80,7 @@ class ppsThread(threading.Thread):
         tx_pps_seq = []
         rx_pps_seq = []
 
-        setlocale(LC_NUMERIC, 'English_US')
+        locale.setlocale(locale.LC_NUMERIC, 'English_US')
 
         print("exitFlag = %d, %s processing..." % (exitFlag, self.name))
         statistic_dst_path = self.statistic.config["tool_path"]
@@ -99,8 +101,8 @@ class ppsThread(threading.Thread):
                         line = re.sub(r"\s{2,}", " ", line)
                         # print(line)
                         line_array = line.split(' ')
-                        tx_pps_seq.append(atoi(line_array[3]))
-                        rx_pps_seq.append(atoi(line_array[6]))
+                        tx_pps_seq.append(locale.atoi(line_array[3]))
+                        rx_pps_seq.append(locale.atoi(line_array[6]))
                         # print(line_array)
                         # print(line_array[3] + " " + line_array[6])
             except Exception as e:
