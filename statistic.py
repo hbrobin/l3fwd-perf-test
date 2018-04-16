@@ -11,11 +11,13 @@ import paramiko
 import re
 import locale
 import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
 
-
-# import pexpect
-
+pkg_size_list = ('64', '128', '256', '512', '1024', '1280', '1518')
+core_list = ('2', '4', '6', '8', '10', '12', '14', '16')
 exitFlag = 0
+
 
 class Statistic:
     def __init__(self, cfg_file):
@@ -34,8 +36,10 @@ class Statistic:
         self.m.sshclient_execmd("mkdir -p " + statistic_dst_path + ";"
                                 "cp " + statistic_src_path + " " + statistic_dst_path + ";"
                                 "chmod +rx " + statistic_dst_path + (self.config["pkg_list"])["eth_stat"])
+        self.df = pd.DataFrame(np.zeros(len(pkg_size_list) * len(core_list)).reshape(len(pkg_size_list), len(core_list)),
+                          index=pkg_size_list, columns=core_list)
 
-    def start_statistic(self, core_num):
+    def start_statistic(self, core_num, pkt_len):
         global exitFlag
         exitFlag = 0
         threadList = ["PPS-Collection-Thread"]
@@ -47,7 +51,7 @@ class Statistic:
 
         # create new thread
         for tName in threadList:
-            self.pps_thread = ppsThread(self, threadID, tName)
+            self.pps_thread = ppsThread(self, threadID, tName, core_num, pkt_len)
             self.pps_thread.start()
             threads.append(self.pps_thread)
             threadID += 1
@@ -56,14 +60,20 @@ class Statistic:
         global exitFlag
         exitFlag = 1
         self.pps_thread.terminate()
+        self.pps_thread.join()
+
+    def save_to_csv(self, file_name):
+        self.df.to_csv(file_name + ".csv", index=True, sep=',')
 
 
 class ppsThread(threading.Thread):
-    def __init__(self, statistic, threadID, name):
+    def __init__(self, statistic, threadID, name, core_num, pkt_len):
         threading.Thread.__init__(self)
         self.threadID = threadID
         self.name = name
         self.statistic = statistic
+        self.core_num = core_num
+        self.pkt_len = str(pkt_len)
         # self.q = q
 
     def run(self):
@@ -109,12 +119,19 @@ class ppsThread(threading.Thread):
                 print("execute command %s error, error message is %s" % (cmd, e))
                 return ""
         print(tx_pps_seq)
-        avg_tx = average(tx_pps_seq)
-        print(avg_tx)
+        avg_tx_pps = average(tx_pps_seq)
+        print(avg_tx_pps)
         print(rx_pps_seq)
-        avg_rx = average(rx_pps_seq)
-        print(avg_rx)
+        avg_rx_pps = average(rx_pps_seq)
+        avg_rx_mpps = float(avg_rx_pps / 1000000)
+        print("raw: %d, mpps: %f" % (avg_rx_pps, avg_rx_mpps))
+        avg_rx_mpps = round(avg_rx_mpps, 2)
+        # avg_rx_mpps = round(avg_rx_mpps + 0.001, 2)
+        print("round mpps: %.2f" % avg_rx_mpps)
+        self.statistic.df[self.core_num][self.pkt_len] = avg_rx_mpps
+        # self.statistic.df[self.pkt_len][self.core_num] = avg_rx_pps
+        # print(self.core_num + " " + self.pkt_len)
+
 
 def average(seq):
     return int(sum(seq) / len(seq))
-    # return float(sum(seq)) / len(seq)
