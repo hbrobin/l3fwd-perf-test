@@ -7,7 +7,7 @@ import nclib
 # import pexpect
 
 
-class FlowGen:
+class PktGen:
     def __init__(self, cfg_file):
         with open(cfg_file) as config_file:
             config_list = json.load(config_file)
@@ -77,7 +77,7 @@ class FlowGen:
         pktgen_dst_path = pktgen_dst_path.rsplit('.', 2)[0]
         print(pktgen_dst_path)
         if 'pktgen_patch' in self.config["pkg_list"]:
-            # step 1: cp patch for pktgen 3.4.5
+            # step 1: cp patch for pktgen
             pktgen_patch_path = self.config["repo_path"] + (self.config["pkg_list"])["pktgen_patch"]
             m.sshclient_execmd("cp " + pktgen_patch_path + " " + pktgen_dst_path)
             # step 2 patch patch file
@@ -95,6 +95,21 @@ class FlowGen:
                                   self.config['username'], self.config['password'])
         m.sshclient_execmd("firewall-cmd --zone=public --add-port=22022/tcp --permanent")
         m.sshclient_execmd("firewall-cmd --reload")
+        print("Set NIC to 40G mode...")
+        mnlx_nics = m.sshclient_execmd("mst status -v | awk '/ConnectX/ { print $5 }'")
+        print(mnlx_nics)
+        # mnlx_nics_str = str(mnlx_nics)
+        mnlx_nics_str = mnlx_nics.decode("utf-8")
+        print(mnlx_nics_str)
+        mnlx_nics = mnlx_nics_str.split("\n")
+        print(mnlx_nics)
+        while '' in mnlx_nics:
+            mnlx_nics.remove('')
+        for mnlx_nic in mnlx_nics:
+            print(mnlx_nic)
+            mnlx_nic_array = mnlx_nic.split('-')
+            print("Set mnlx_nic: %s" % mnlx_nic_array[1])
+            m.sshclient_execmd("ethtool -s " + mnlx_nic_array[1] + " speed 40000 duplex full autoneg off")
         print("Starting pktgen...")
         # m = session.DirectSession(server_config['host_name'], server_config['host_port'],
         #                           server_config['username'], server_config['password'])
