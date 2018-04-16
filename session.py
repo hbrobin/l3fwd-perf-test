@@ -77,13 +77,14 @@ class DirectSession:
                 print("Sync local files: \"" + local_pkg_path + filename + "\"  to server path:\"" + repo_path + filename + "\"")
                 sync_file_count += 1
             # sync configs
-            filenames = tuple(cfg_dict["cfg_list"].values())
-            print(filenames)
-            for filename in filenames:
-                sftp.put(local_cfg_path + filename, config_path + filename)
-                print("Sync local files: \"" + local_cfg_path + filename + "\"  to server path:\"" + config_path + filename + "\"")
-                sync_file_count += 1
-            print("******************************* Synchronize " + str(sync_file_count) + " Files -- Done")
+            if "cfg_list" in cfg_dict:
+                filenames = tuple(cfg_dict["cfg_list"].values())
+                print(filenames)
+                for filename in filenames:
+                    sftp.put(local_cfg_path + filename, config_path + filename)
+                    print("Sync local files: \"" + local_cfg_path + filename + "\"  to server path:\"" + config_path + filename + "\"")
+                    sync_file_count += 1
+                print("******************************* Synchronize " + str(sync_file_count) + " Files -- Done")
         finally:
             transport.close()
             sftp.close()
