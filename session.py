@@ -52,16 +52,16 @@ class DirectSession:
         paramiko.util.log_to_file("paramiko_syncfile.log")
 
         try:
-            transport = paramiko.Transport(self.hostname, self.port)
+            transport = paramiko.Transport((self.hostname, self.port))
             transport.connect(username=self.username, password=self.password)
             sftp = paramiko.SFTPClient.from_transport(transport)
             print("Connect to remote server success.")
             print("******************************* Synchronize Files -- Start")
             #for path in path_config:
-            local_pkg_path = cfg_dict["local_pkg_path"]
-            local_cfg_path = cfg_dict["local_cfg_path"]
-            repo_path = cfg_dict["repo_path"]
-            config_path = cfg_dict["config_path"]
+            local_pkg_path = cfg_dict["path"]["local_pkg_path"]
+            local_cfg_path = cfg_dict["path"]["local_cfg_path"]
+            repo_path = cfg_dict["path"]["repo_path"]
+            config_path = cfg_dict["path"]["config_path"]
             create_repo_path = "mkdir -p "+repo_path
             create_config_path = "mkdir -p " + config_path
             self.sshclient_execmd(create_repo_path)
@@ -77,14 +77,22 @@ class DirectSession:
                 print("Sync local files: \"" + local_pkg_path + filename + "\"  to server path:\"" + repo_path + filename + "\"")
                 sync_file_count += 1
             # sync configs
-            if "cfg_list" in cfg_dict:
-                filenames = tuple(cfg_dict["cfg_list"].values())
+            if "cfg_list_host" in cfg_dict:
+                filenames = tuple(cfg_dict["cfg_list_host"].values())
                 print(filenames)
                 for filename in filenames:
                     sftp.put(local_cfg_path + filename, config_path + filename)
                     print("Sync local files: \"" + local_cfg_path + filename + "\"  to server path:\"" + config_path + filename + "\"")
                     sync_file_count += 1
-                print("******************************* Synchronize " + str(sync_file_count) + " Files -- Done")
+                print("******************************* Synchronize " + str(sync_file_count) + " Host Files -- Done")
+            if "cfg_list_vm" in cfg_dict:
+                filenames = tuple(cfg_dict["cfg_list_vm"].values())
+                print(filenames)
+                for filename in filenames:
+                    sftp.put(local_cfg_path + filename, config_path + filename)
+                    print("Sync local files: \"" + local_cfg_path + filename + "\"  to server path:\"" + config_path + filename + "\"")
+                    sync_file_count += 1
+                print("******************************* Synchronize " + str(sync_file_count) + " VM Files -- Done")
         finally:
             transport.close()
             sftp.close()
@@ -247,7 +255,8 @@ def upload_files(cfg_file):
     print("Load configuration file success.")
     for index in range(len(config_list)):
         server_config = config_list[index]
-        m = DirectSession(server_config['host_name'], server_config['host_port'], server_config['username'], server_config['password'])
+        m = DirectSession(server_config['server_info']['host_name'], server_config['server_info']['host_port'],
+                          server_config['server_info']['username'], server_config['server_info']['password'])
         m.sync_sw_repo(server_config)
 
     print("Load configuration file success.")

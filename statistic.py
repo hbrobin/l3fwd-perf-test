@@ -15,7 +15,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 pkg_size_list = ('64', '128', '256', '512', '1024', '1280', '1518')
-core_list = ('2', '4', '6', '8', '10', '12', '14', '16')
+core_list = ('1','2', '4', '6', '8', '10', '12', '14', '16')
 exitFlag = 0
 
 
@@ -26,13 +26,13 @@ class Statistic:
             self.pktgen_cli = None
             for index in range(len(config_list)):
                 server_config = config_list[index]
-                if "xmit" == server_config["server_type"]:
+                if "xmit" == server_config["server_info"]["mode"]:
                     self.config = config_list[index]
         print("Load flowgen configuration file success.")
-        self.m = session.DirectSession(self.config['host_name'], self.config['host_port'], self.config['username'],
-                                  self.config['password'])
-        statistic_src_path = self.config["repo_path"] + (self.config["pkg_list"])["eth_stat"]
-        statistic_dst_path = self.config["tool_path"]
+        self.m = session.DirectSession(self.config['server_info']['host_name'], self.config['server_info']['host_port'], self.config['server_info']['username'],
+                                  self.config['server_info']['password'])
+        statistic_src_path = self.config["path"]["repo_path"] + (self.config["pkg_list"])["eth_stat"]
+        statistic_dst_path = self.config["path"]["tool_path"]
         self.m.sshclient_execmd("mkdir -p " + statistic_dst_path + ";"
                                 "cp " + statistic_src_path + " " + statistic_dst_path + ";"
                                 "chmod +rx " + statistic_dst_path + (self.config["pkg_list"])["eth_stat"])
@@ -63,7 +63,9 @@ class Statistic:
         self.pps_thread.join()
 
     def save_to_csv(self, file_name):
-        self.df.to_csv(file_name + ".csv", index=True, sep=',')
+        abs_path = self.config["path"]["report_path"]
+        type = self.config["server_info"]["dut_type"]
+        self.df.to_csv(abs_path + type + "_" + file_name + ".csv", index=True, sep=',')
 
 
 class ppsThread(threading.Thread):
@@ -93,15 +95,15 @@ class ppsThread(threading.Thread):
         locale.setlocale(locale.LC_NUMERIC, 'English_US')
 
         print("exitFlag = %d, %s processing..." % (exitFlag, self.name))
-        statistic_dst_path = self.statistic.config["tool_path"]
+        statistic_dst_path = self.statistic.config["path"]["tool_path"]
         cmd = statistic_dst_path + self.statistic.config["pkg_list"]["eth_stat"]
         print(cmd)
         while not exitFlag:
             try:
                 s = paramiko.SSHClient()
                 s.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-                s.connect(hostname=self.statistic.config['host_name'], port=self.statistic.config['host_port'],
-                          username=self.statistic.config['username'], password=self.statistic.config['password'])
+                s.connect(hostname=self.statistic.config['server_info']['host_name'], port=self.statistic.config['server_info']['host_port'],
+                          username=self.statistic.config['server_info']['username'], password=self.statistic.config['server_info']['password'])
                 stdin, stdout, stderr = s.exec_command(cmd)
 
                 for line in stdout:
@@ -109,12 +111,12 @@ class ppsThread(threading.Thread):
                     if 'SUM' in line:
                         # remove redundant space
                         line = re.sub(r"\s{2,}", " ", line)
-                        # print(line)
+                        print(line)
                         line_array = line.split(' ')
                         tx_pps_seq.append(locale.atoi(line_array[3]))
                         rx_pps_seq.append(locale.atoi(line_array[6]))
-                        # print(line_array)
-                        # print(line_array[3] + " " + line_array[6])
+                        print(line_array)
+                        print(line_array[3] + " " + line_array[6])
             except Exception as e:
                 print("execute command %s error, error message is %s" % (cmd, e))
                 return ""

@@ -8,10 +8,12 @@ import statistic
 import time
 import nclib
 
-core_list = ('2', '4', '6', '8', '10', '12', '14', '16')
-# core_list = ('8')
+core_list = ('1', '2', '4', '6', '8', '10', '12', '14', '16')
+# core_list = ('1','2', '8', '16')
+# core_list = ('4', '8')
 pkt_len_list = (64, 128, 256, 512, 1024, 1280, 1518)
 # pkt_len_list = (64, 128)
+# pkt_len_list = (64)
 
 class L3Perf:
     def __init__(self, l3_cfg_file):
@@ -40,14 +42,14 @@ def run_unidirection_l3_perf():
             for core_num in core_list:
                 fg.set_pktgen_range(pkt_len)
                 l3.run_l3fwd(core_num)
-                fg.start_pktgen('1')
+                fg.start_pktgen('0')
                 # waiting to reach max pps
                 time.sleep(5)
                 pps.start_statistic(core_num, pkt_len)
                 # time of testing duration
-                time.sleep(30)
+                fg.wait_test_period()
                 pps.stop_statistic()
-                fg.stop_pktgen('1')
+                fg.stop_pktgen('0')
                 l3.stop_l3fwd()
 
         fg.quit_pktgen()
@@ -81,7 +83,7 @@ def run_bidirection_l3_perf():
                 time.sleep(5)
                 pps.start_statistic(core_num, pkt_len)
                 # time of testing duration
-                time.sleep(30)
+                fg.wait_test_period()
                 pps.stop_statistic()
                 fg.stop_pktgen('all')
                 l3.stop_l3fwd()
