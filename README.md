@@ -7,3 +7,6 @@ A simple test framework for l3fwd performance test in DUT and using pktgen as tr
 - Collect “stable” perf result (average)
 - Save effort of fill in perf result data manually, auto generate csv file
 - Collect bidirectional/unidirectional in one run
+
+# An overview of the test framework
+![image](https://github.com/hbrobin/l3fwd-perf-test/raw/master/img/overview.png)
