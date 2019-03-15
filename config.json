@@ -1,0 +1,77 @@
+[
+  {
+    "server_info": {
+      "mode": "xmit",
+      "dut_type": "host",
+      "host_name": "10.10.10.20",
+      "host_port": 22,
+      "username": "test",
+      "password": "test123",
+      "rte_target":"arm64-armv8a-linuxapp-gcc"
+    },
+    "path": {
+      "local_pkg_path": "C:/sw_repo/",
+      "local_cfg_path": "C:/config/",
+      "report_path": "C:/perf_report/",
+      "repo_path": "/root/DPDK/L3_Xmit/sw_repo/",
+      "config_path": "/root/DPDK/L3_Xmit/config/",
+      "dpdk_path": "/root/DPDK/L3_Xmit/dpdk-org/",
+      "mnlx_path": "/root/DPDK/L3_Xmit/mellanox/",
+      "tool_path": "/root/DPDK/L3_Xmit/tools/"
+    },
+    "pkg_list":{
+      "dpdk_pkg":"dpdk-18.05.tar.gz",
+      "ofed_pkg":"MLNX_OFED_LINUX-4.3-1.0.1.0-rhel7.4alternate-aarch64.tgz",
+      "pktgen_pkg":"pktgen-3.4.9.tar.gz",
+      "pktgen_patch":"pktgen-3.4.9-dpdk1802-compile-fix.patch",
+      "eth_stat":"eth_stat.sh"
+    },
+    "cfg_list_host":{
+      "pktgen_range_64B":"test_range_64B.lua",
+      "pktgen_range_128B":"test_range_128B.lua",
+      "pktgen_range_256B":"test_range_256B.lua",
+      "pktgen_range_512B":"test_range_512B.lua",
+      "pktgen_range_1024B":"test_range_1024B.lua",
+      "pktgen_range_1280B":"test_range_1280B.lua",
+      "pktgen_range_1518B":"test_range_1518B.lua"
+    },
+    "cfg_list_vm":{
+      "pktgen_range_64B":"test_range_64B_vm.lua",
+      "pktgen_range_128B":"test_range_128B_vm.lua",
+      "pktgen_range_256B":"test_range_256B_vm.lua",
+      "pktgen_range_512B":"test_range_512B_vm.lua",
+      "pktgen_range_1024B":"test_range_1024B_vm.lua",
+      "pktgen_range_1280B":"test_range_1280B_vm.lua",
+      "pktgen_range_1518B":"test_range_1518B_vm.lua"
+    },
+    "pktgen_port":22022,
+    "test_period_sec":600
+  },
+  {
+    "server_info": {
+      "mode": "forward",
+      "type": "host",
+      "host_name": "10.10.10.21",
+      "host_port": 22,
+      "username": "test",
+      "password": "test123",
+      "rte_target": "arm64-armv8a-linuxapp-gcc"
+    },
+    "path": {
+      "local_pkg_path": "C:/sw_repo/",
+      "local_cfg_path": "C:/config/",
+      "repo_path": "/root/DPDK/L3_Forward/sw_repo/",
+      "config_path": "/root/DPDK/L3_Forward/config/",
+      "dpdk_path": "/root/DPDK/L3_Forward/dpdk-org/",
+      "mnlx_path": "/root/DPDK/L3_Forward/mellanox/",
+      "tool_path": "/root/DPDK/L3_Forward/tools/",
+      "l3fwd_sub_path": "examples/l3fwd"
+    },
+    "pkg_list":{
+      "dpdk_pkg":"dpdk-18.02.tar.gz",
+      "ofed_pkg":"MLNX_OFED_LINUX-4.3-1.0.1.0-rhel7.4alternate-aarch64.tgz",
+      "eth_stat":"eth_stat.sh"
+    },
+    "l3fwd_cmd_cfg":"l3fwd_cmdline_1q_lcore.json"
+  }
+]
